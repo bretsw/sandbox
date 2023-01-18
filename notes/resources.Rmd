@@ -1,0 +1,18 @@
+**Beginners:**
+- [RStudio Beginners' Guide](https://education.rstudio.com/learn/beginner/)
+- Book: [*Data Science in Education Using R*](https://datascienceineducation.com)
+  - See [Chapter 12](https://datascienceineducation.com/c12.html) - Walkthrough 6: Exploring Relationships Using Social Network Analysis With Social Media Data
+  - [Physical copy of DSIEUR](https://www.routledge.com/Data-Science-in-Education-Using-R/Estrellado-Freer-Mostipak-Rosenberg-Velasquez/p/book/9780367422257)
+  - [Even more resources from DSIEUR](https://datascienceineducation.com/c18.html)
+
+**Intermediates:**
+- [RStudio Intermediates' Guide](https://education.rstudio.com/learn/intermediate/)
+- [{tidytags} package notes](https://docs.ropensci.org/tidytags/index.html)
+- Book: [*R for Data Science*](http://r4ds.had.co.nz/)
+
+**Experts:**
+- [RStudio Experts' Guide](https://education.rstudio.com/learn/expert/)
+- Book: [*Learning Statistics with R*](https://learningstatisticswithr.com/)
+- [*Data Science in Education Using R*](https://datascienceineducation.com)
+  - See [Chapter 20.3 Appendix C](https://datascienceineducation.com/c20.html#c20c) - Social Network Influence and Selection Models
+- SNA resources: [Dr. Ken Frank's website](https://sites.google.com/msu.edu/kenfrank/social-network-resources)
