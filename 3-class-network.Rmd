@@ -1,0 +1,324 @@
+---
+title: "3a. Class Network"
+subtitle: "Analytics Sandbox"
+author: "K. Bret Staudt Willet | Florida State University"
+date: "February 1, 2023"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    seal: true
+    css: [default, 'css/custom.css', 'css/custom-fonts.css']
+    nature:
+      titleSlideClass: [left, bottom]
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+
+library(knitr)
+library(tidyverse)
+library(xaringan)
+library(fontawesome)
+library(igraph)
+library(tidygraph)
+library(ggraph)
+library(ggthemes)
+library(cowplot)
+library(kableExtra)
+```
+
+class: inverse, center, middle
+
+# `r fa("fas fa-diagram-project", fill = "#fff")` <br><br> **Part 3a:** <br> Class Network
+
+---
+
+# `r fa("fas fa-diagram-project", fill = "#fff")` Class Network data
+
+```{r}
+edgelist1 <- 
+  read_csv("data/edgelist.csv", 
+           show_col_types = FALSE) %>%
+  mutate(group = week,
+         week = substr(week, 1, 1)
+         ) %>% 
+  group_by(from, to) %>% 
+  mutate(weight = n())
+glimpse(edgelist1)
+```
+
+---
+
+# `r fa("fas fa-diagram-project", fill = "#fff")` Class Network data
+
+```{r}
+head(edgelist1, 10)
+```
+
+---
+
+class: inverse, center, middle
+
+# `r fa("fas fa-otter", fill = "#fff")` <br><br> Try it Out! 
+
+---
+
+# `r fa("fas fa-otter", fill = "#fff")` Try it Out!
+
+What do you think this code will do?
+
+```{r, message=FALSE, warning=FALSE}
+network_graph1 <-
+  tidygraph::as_tbl_graph(edgelist1) %>%
+  mutate(popularity = centrality_degree(mode = 'in'))
+network_graph1
+```
+
+---
+
+# `r fa("fas fa-otter", fill = "#fff")` Try it Out!
+
+What do you think this code will do?
+
+```{r, message=FALSE, warning=FALSE}
+network_graph1 %>%
+  ggraph(layout = 'kk')
+```
+
+---
+
+# `r fa("fas fa-otter", fill = "#fff")` Try it Out!
+
+What do you think this code will do?
+
+```{r, message=FALSE, warning=FALSE}
+network_graph1 %>%
+  ggraph(layout = 'kk') +
+  geom_edge_arc()
+```
+
+---
+
+# `r fa("fas fa-otter", fill = "#fff")` Try it Out!
+
+What do you think this code will do?
+
+```{r, message=FALSE, warning=FALSE}
+network_graph1 %>%
+  ggraph(layout = 'kk') +
+  geom_edge_arc() +
+  geom_node_point()
+```
+
+---
+
+# `r fa("fas fa-otter", fill = "#fff")` Try it Out!
+
+What do you think this code will do?
+
+```{r, message=FALSE, warning=FALSE}
+network_graph1 %>%
+  ggraph(layout = 'kk') +
+  geom_edge_arc() +
+  geom_node_point(alpha = .4, aes(size = popularity)) +
+  scale_size(range = c(1,10))
+```
+
+---
+
+# `r fa("fas fa-otter", fill = "#fff")` Try it Out!
+
+What do you think this code will do?
+
+```{r, message=FALSE, warning=FALSE}
+network_graph1 %>%
+  ggraph(layout = 'kk') +
+  geom_edge_arc(alpha = .2, 
+                width = .5, 
+                strength = .5,
+                color = 'steelblue') +
+  geom_node_point(alpha = .4, aes(size = popularity)) +
+  scale_size(range = c(1,10))
+```
+
+---
+
+# `r fa("fas fa-otter", fill = "#fff")` Try it Out!
+
+What do you think this code will do?
+
+```{r, message=FALSE, warning=FALSE}
+sociogram1 <-
+  network_graph1 %>%
+  ggraph(layout = 'kk') +
+  geom_edge_arc(alpha = .2, 
+                width = .5, 
+                strength = .5,
+                color = 'steelblue'
+  ) +
+  geom_node_point(alpha = .4, aes(size = popularity)) +
+  scale_size(range = c(1,10)) +
+  theme_wsj() + 
+  scale_colour_wsj("colors6") +
+  theme(axis.line=element_blank(),
+        axis.text.x=element_blank(), axis.text.y=element_blank(),
+        axis.ticks.x =element_blank(), axis.ticks.y =element_blank(),
+        axis.title.x=element_blank(), axis.title.y=element_blank(),
+        panel.background=element_blank(), panel.border=element_blank(),
+        panel.grid.major=element_blank(), panel.grid.minor=element_blank())
+sociogram1
+```
+
+---
+
+# `r fa("fas fa-otter", fill = "#fff")` Picture it!
+
+```{r, include=FALSE, eval=FALSE}
+ggsave(sociogram1, file="output/3-class-network.png", width=8, height=4.5)
+```
+
+```{r, out.width="100%", echo=FALSE, fig.align="center"}
+include_graphics("output/3-class-network.png")
+```
+
+---
+
+# `r fa("fas fa-otter", fill = "#fff")` Look closer!
+
+**Online Class Discussion - Social Network Analysis**
+
+There are quite a few descriptive measures of networks:
+
+- **Order:** number of nodes/vertices (students, in this case)
+- **Size:** number of edges/connections (responses, in this case)
+- **Reciprocity:** mutuality
+- **Transitivity:** clustering
+- **Diameter:** similar to degrees of separation
+- **Density:** out of all possible connections, percentage that have been made
+- **Node degree:** number of connections
+- **Sentiment score:** how positive or negative in aggregate
+- Character count, Word count, Length of threads
+
+---
+
+# `r fa("fas fa-otter", fill = "#fff")` Look closer!
+
+**Order:** number of nodes/vertices (students, in this case)
+
+```{r}
+library(igraph)
+gorder(network_graph1)
+```
+
+<hr>
+
+**Size:** number of edges/connections (responses, in this case)
+
+```{r}
+gsize(network_graph1)
+```
+
+---
+
+# `r fa("fas fa-otter", fill = "#fff")` Look closer!
+
+**Reciprocity:** mutuality
+
+```{r}
+reciprocity(network_graph1)
+```
+
+<hr>
+
+**Transitivity:** clustering
+
+```{r}
+transitivity(network_graph1)
+```
+
+---
+
+# `r fa("fas fa-otter", fill = "#fff")` Look closer!
+
+**Diameter:** similar to degrees of separation
+
+```{r}
+diameter(network_graph1)
+```
+
+<hr>
+
+**Density:** out of all possible connections, percentage that have been made
+
+```{r}
+edge_density(network_graph1)
+```
+
+---
+
+# `r fa("fas fa-otter", fill = "#fff")` Look closer!
+
+**Node degree:** number of connections
+
+```{r}
+mean(degree(network_graph1))
+```
+
+<hr>
+
+```{r}
+degree(network_graph1) %>% mean()
+```
+
+<hr>
+
+```{r}
+median(degree(network_graph1))
+```
+
+---
+
+class: inverse, center, middle
+
+# `r fa("fas fa-otter", fill = "#fff")` <br> <br> **Try it differently!** <br><br> Interact with a Shiny App
+
+https://fsuksu.shinyapps.io/fsuksu/
+
+---
+
+class: inverse, center, middle
+
+# `r fa("fas fa-code", fill = "#fff")` <br><br> Try on your own!
+
+---
+
+# `r fa("fas fa-code", fill = "#fff")` Try on your own!
+
+- Download a copy of this repository.
+- Use the saved data in the "data" folder to play around a bit more, changing different parameters.
+- Reflect: 
+  - What other comparisons might you make?
+  - How else might you analyze these data?
+
+---
+
+class: inverse, center, middle
+
+# `r fa("fas fa-list", fill = "#fff")` <br><br> Appendix: <br> Helpful Resources <br> and Troubleshooting
+
+---
+
+# Resources
+
+```{r child="notes/resources.Rmd"} 
+```
+
+---
+
+# Troubleshooting
+
+```{r child="notes/troubleshooting.Rmd"} 
+```

@@ -8,3 +8,4 @@ Designed for **EME6356 (Spring 2023)**
 
 1. [Intro](1-intro.html)
 2. [Fitbit](2-fitbit.html)
+3. [Class Network]
