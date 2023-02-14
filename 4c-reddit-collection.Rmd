@@ -1,0 +1,232 @@
+---
+title: "Collecting Reddit Data with PRAW and PushShift"
+subtitle: "Analytics Sandbox"
+author: "K. Bret Staudt Willet | Florida State University"
+date: "February 14, 2023"
+
+---
+
+```{r setup, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(reticulate)
+library(tidyverse)
+library(RedditExtractoR)
+library(anytime)
+library(lubridate)
+library(beepr)
+```
+
+## Indicate Specific Conda Environment
+
+```{r set_python_env}
+reticulate::use_condaenv("~/r-reticulate")
+```
+
+## Import Python Packages (will use "~/r-reticulate" as per call to use_condaenv)
+
+```{python initialized}
+import pandas as pd
+import datetime as dt
+```
+
+1. Create a Reddit app and get client ID and secret: https://github.com/reddit-archive/reddit/wiki/OAuth2-Quick-Start-Example#first-steps
+
+2. Configure PRAW in R: https://praw.readthedocs.io/en/stable/getting_started/configuration.html#configuration
+
+3. Store Reddit app secrets using `r usethis::edit_r_environ()`
+
+```{r, include=FALSE}
+my_client_id <- Sys.getenv('praw_client_id') 
+my_client_secret <- Sys.getenv('praw_client_token') 
+my_user_agent <- Sys.getenv('praw_user_agent') 
+```
+
+## PRAW
+
+Now, get started with PRAW:
+
+```{python setup-praw}
+import praw
+
+reddit = praw.Reddit(
+  client_id = r.my_client_id, 
+  client_secret = r.my_client_secret, 
+  user_agent = r.my_user_agent
+  )
+```
+
+## PMAW
+
+Next, we will need to install PMAW to access the Pushshift API archive. Use the command line $: `pip3 install pmaw`.
+
+```{python initialize_PushShift}
+from pmaw import PushshiftAPI
+api_praw = PushshiftAPI(praw = reddit)
+```
+
+
+
+## Get Hot Posts
+
+See https://towardsdatascience.com/scraping-reddit-data-1c0af3040768
+
+```{python}
+analytics_subreddit = reddit.subreddit('analytics')
+print(analytics_subreddit.description)
+```
+
+```{python}
+print(analytics_subreddit.subscribers)
+```
+
+```{python}
+# get hot posts from the r/analytics subreddit
+hot_posts = reddit.subreddit('analytics').hot(limit=10)
+for post in hot_posts:
+    print(post.title)
+```
+
+```{python}
+hot_posts = []
+for post in analytics_subreddit.hot(limit=10):
+    hot_posts.append([post.title, post.score, post.id, post.subreddit, post.url, post.num_comments, post.selftext, post.created])
+hot_posts = pd.DataFrame(hot_posts,columns=['title', 'score', 'id', 'subreddit', 'url', 'num_comments', 'body', 'created'])
+```
+
+```{r}
+hot_posts_df <- py$hot_posts
+glimpse(hot_posts_df)
+```
+
+```{r}
+hot_posts_df$body[1]
+```
+
+
+
+## Get Posts
+
+See for ideas: https://melaniewalsh.github.io/Intro-Cultural-Analytics/04-Data-Collection/14-Reddit-Data.html
+
+```{python, eval=FALSE}
+start_epoch = int(dt.datetime(2022, 1, 1).timestamp())
+end_epoch = int(dt.datetime(2023, 2, 1).timestamp())
+```
+
+```{python, eval=FALSE}
+posts_praw = api_praw.search_submissions(
+  #q = "learning", 
+  subreddit = 'analytics', 
+  after = start_epoch,
+  before = end_epoch,
+  limit = 1000
+)
+
+post_list = [post for post in posts_praw]
+posts_df = pd.DataFrame(post_list)
+posts_df.shape
+```
+
+```{r, eval=FALSE}
+py$posts_df$subreddit[[1]]
+```
+
+```{r, eval=FALSE}
+posts_df_r <- 
+  py$posts_df %>% 
+  select(created_utc, subreddit, id, author, title, selftext, 
+         num_comments, score, ups, downs, upvote_ratio, permalink, url) %>%
+  rename(post_id = id,
+         post_date_time = created_utc,
+         post_text = selftext) %>%
+  mutate(subreddit = stringr::str_remove(permalink, "/"),
+         subreddit = stringr::str_remove_all(subreddit, "/comments.*"),
+         post_date_time = anytime::anytime(post_date_time, asUTC=TRUE),
+         post_date_time = lubridate::ymd_hms(lubridate::as_datetime(post_date_time)),
+         post_date_time = lubridate::with_tz(post_date_time, tzone='US/Eastern'),
+         date = date(post_date_time),
+         year = year(post_date_time)) #%>%
+  #distinct(post_id, .keep_all = TRUE)
+
+posts_df_r$subreddit[1]; min(posts_df_r$date); max(posts_df_r$date)
+```
+
+```{r, eval=FALSE}
+write_csv(posts_df_r, "./data/reddit-analytics-posts.csv")
+```
+
+```{r, message=FALSE}
+posts <- 
+  read_csv("./data/reddit-analytics-posts.csv") %>%
+  mutate(status = ifelse(post_text == "[deleted]",
+                         "deleted",
+                         ifelse(post_text == "[removed]",
+                                "removed",
+                                "remaining")),
+         status = ifelse(is.na(status),
+                         "remaining",
+                         status),
+         post_url = paste0("https://www.reddit.com", permalink)
+  )
+posts %>% count(status)
+```
+
+```{r}
+filtered_posts <-
+  posts %>%
+  filter(status == "remaining")
+nrow(filtered_posts); paste("Expected number of comments:", sum(filtered_posts$num_comments))
+```
+
+```{r, eval=FALSE}
+write_csv(filtered_posts, "./data/reddit-analytics-posts-filtered.csv")
+```
+
+## Get Comments
+
+```{r, message=FALSE}
+posts2 <- read_csv("./data/reddit-analytics-posts-filtered.csv")
+```
+
+```{r comments, eval=FALSE}
+subreddit_vector <- unique(posts2$subreddit)
+
+comments_with_subreddit <-
+  function(x) {
+    tmp_comments <-  
+      posts2 %>%
+      filter(subreddit == x) %>%
+      pull(post_url) %>%
+      RedditExtractoR::get_thread_content() %>%
+      `[[`(2)
+    if(is.data.frame(tmp_comments)) {
+      tmp_comments <-
+        tmp_comments %>%
+        mutate(subreddit = x,
+               comment_id = as.character(comment_id))
+    }
+    return(tmp_comments)
+  }
+
+comments_list <- list()
+for(i in seq_along(subreddit_vector)) {
+  print(i)
+  comments_list[[i]] <- comments_with_subreddit(subreddit_vector[i])
+}
+beepr::beep(8)
+
+all_comments <- 
+  bind_rows(comments_list, .id = "column_label")
+
+filtered_comments <-
+  all_comments %>%
+  filter(comment != "[deleted]",
+         comment!= "[removed]")
+
+nrow(all_comments); nrow(filtered_comments)
+```
+
+```{r, eval=FALSE}
+write_csv(all_comments, "./data/reddit-analytics-comments.csv")
+write_csv(filtered_comments, "./data/reddit-analytics-comments-filtered.csv")
+```

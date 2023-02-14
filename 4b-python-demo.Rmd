@@ -1,0 +1,95 @@
+---
+title: "Quick Demo of Python and R"
+subtitle: "Analytics Sandbox"
+author: "K. Bret Staudt Willet | Florida State University"
+date: "February 14, 2023"
+
+---
+
+```{r setup, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(reticulate)
+library(dplyr)
+```
+
+## Indicate Specific Conda Environment
+
+```{r set_python_env}
+reticulate::use_condaenv("~/r-reticulate")
+```
+
+## Import Python Packages (will use "~/r-reticulate" as per call to use_condaenv)
+
+```{python initialized}
+import pandas as pd
+import seaborn as sb
+import matplotlib.pyplot as plt
+```
+
+## Look at Flowers with Python
+
+For a quick demo, see:
+https://medium.com/save-the-data/how-to-use-python-in-r-with-reticulate-and-conda-36685534f06a
+
+```{r load_iris_data}
+data("iris")
+iris_df <- iris
+```
+
+```{python explore_iris}
+iris_dataset = r.iris_df
+iris_dataset["Species"].describe()
+```
+
+```{python boxplot_iris}
+plt.clf()
+sb.set_style("ticks")
+#sb.set_context("paper")
+
+iris_dataset["Species"].describe()
+iris_dataset["Petal.Length"].describe()
+sb.boxplot(data = iris_dataset, x = "Species", y = "Petal.Length")
+plt.show()
+```
+
+```{python matrix_iris}
+plt.clf()
+sb.set_style("ticks")
+#sb.set_context("paper")
+
+p = sb.pairplot(iris_dataset, hue="Species")
+plt.show()
+```
+
+## Look at Star Wars with Python
+
+```{r load_starwars_data}
+data("starwars")
+sw_df <- starwars
+names(sw_df)
+```
+
+```{python explore_starwars}
+sw_dataset = r.sw_df
+sw_dataset["gender"].describe()
+```
+
+```{python boxplot_starwars}
+plt.clf()
+sb.set_style("ticks")
+#sb.set_context("paper")
+
+sw_dataset["gender"].describe()
+sw_dataset["mass"].describe()
+sb.boxplot(data = sw_dataset, x = "gender", y = "mass")
+plt.show()
+```
+
+```{python matrix_starwars}
+plt.clf()
+sb.set_style("ticks")
+#sb.set_context("paper")
+
+p2 = sb.pairplot(sw_dataset, hue="gender")
+plt.show()
+```

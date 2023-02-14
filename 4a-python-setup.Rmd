@@ -1,0 +1,58 @@
+---
+title: "Python Setup"
+subtitle: "Analytics Sandbox"
+author: "K. Bret Staudt Willet | Florida State University"
+date: "February 14, 2023"
+
+---
+
+```{r setup, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(reticulate)
+```
+
+## Set Up Python to Use in R
+
+For help installing Python to your local machine, see:
+https://docs.python-guide.org/
+
+See also:
+https://support.posit.co/hc/en-us/articles/1500007929061-Using-Python-with-the-RStudio-IDE
+
+```{r python-install, eval=FALSE}
+reticulate::install_miniconda()
+```
+
+## Create a New Python Environment
+
+```{r new_python_env, eval=FALSE}
+reticulate::conda_create("~/r-reticulate")
+```
+
+## Check Python Installation
+
+```{r check-install, eval=FALSE}
+use_python('~/r-reticulate/bin/python3')
+py_config()
+```
+
+## Install Python Packages
+
+```{r install_python_packages, eval=FALSE}
+# General Python packages:
+conda_install("~/r-reticulate", "pandas")
+conda_install("~/r-reticulate", "scipy")
+conda_install("~/r-reticulate", "seaborn")
+#conda_install("~/r-reticulate", "datetime") # install with command line $: pip3 install datetime
+
+
+# Packages for Reddit:
+conda_install("~/r-reticulate", "praw")
+#conda_install("~/r-reticulate", "pmaw")  # install with command line $: pip3 install pmaw
+```
+
+## Indicate Specific Conda Environment
+
+```{r set_python_env, eval=FALSE}
+reticulate::use_condaenv("~/r-reticulate")
+```

@@ -1,0 +1,61 @@
+---
+title: "Analyzing Reddit Data"
+subtitle: "Analytics Sandbox"
+author: "K. Bret Staudt Willet | Florida State University"
+date: "February 14, 2023"
+
+---
+
+```{r setup, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(anytime)
+library(lubridate)
+library(RColorBrewer)
+library(viridis)
+```
+
+## Read In Posts and Comments
+
+```{r, message=FALSE}
+posts <- 
+  read_csv("./data/reddit-analytics-posts-filtered.csv")
+comments <- 
+  read_csv("./data/reddit-analytics-comments-filtered.csv")
+```
+
+## Comments on Posts
+
+```{r, message=FALSE}
+posts %>% 
+  summarize(mean = mean(num_comments),
+            sd = sd(num_comments),
+            median = median(num_comments),
+            min = min(num_comments),
+            max = max(num_comments)
+  )
+```
+
+## Posts Voting
+
+```{r, message=FALSE}
+posts %>% 
+  summarize(mean = mean(score),
+            sd = sd(score),
+            median = median(score),
+            min = min(score),
+            max = max(score)
+  )
+```
+
+## Comments Voting
+
+```{r, message=FALSE}
+comments %>% 
+  summarize(mean = mean(score),
+            sd = sd(score),
+            median = median(score),
+            min = min(score),
+            max = max(score)
+  )
+```

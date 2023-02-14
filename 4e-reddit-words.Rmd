@@ -1,0 +1,70 @@
+---
+title: "Reddit Words"
+subtitle: "Analytics Sandbox"
+author: "K. Bret Staudt Willet | Florida State University"
+date: "February 14, 2023"
+
+---
+
+```{r setup, message=FALSE}
+library(tidyverse)
+library(quanteda)
+```
+
+## Read In Posts and Comments
+
+```{r, message=FALSE}
+posts <- 
+  read_csv("./data/reddit-analytics-posts-filtered.csv") %>%
+  select(subreddit, title, post_text)
+comments <- 
+  read_csv("./data/reddit-analytics-comments-filtered.csv") %>%
+  select(subreddit, comment)
+```
+
+```{r} 
+corpus_posts <-
+  posts %>%
+  mutate(text = paste(title, post_text)) %>%
+  pull(text) %>%
+  paste(collapse = ' ')
+
+corpus_comments <-
+  comments %>%
+  pull(comment) %>%
+  paste(collapse = ' ')
+
+corpus_all <- paste(corpus_posts, corpus_comments, collapse = ' ')
+```
+
+```{r} 
+my_extra_stopwords <-
+  c("NA", "just", "also", "can", "like", "etc", "lot", "many", "much", "even", "sure")
+
+dfm_all <-
+  corpus_all %>%
+  quanteda::corpus() %>%
+  quanteda::tokens(
+    remove_separators = TRUE,
+    remove_punct = TRUE,
+    remove_symbols = TRUE,
+    remove_numbers = TRUE,
+    remove_url = TRUE) %>%
+  tokens_select(min_nchar=3L) %>% #Filter: at least 3 letters 
+  quanteda::dfm(tolower = TRUE) %>%
+  quanteda::dfm_remove(c(my_extra_stopwords,
+                         quanteda::stopwords("english")))
+```
+
+## Term Frequency and Document Frequency based on whole corpus
+
+```{r} 
+top_words_vector <- 
+  dfm_all %>%
+  quanteda::topfeatures(scheme = "count", n = 100)
+
+top_words <-
+  tibble(term = names(top_words_vector), 
+         count = top_words_vector)
+head(top_words, 10)
+```
