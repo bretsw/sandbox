@@ -1,0 +1,179 @@
+---
+title: "Visualization"
+author: "K. Bret Staudt Willet | Florida State University"
+date: "February 28, 2023"
+subtitle: Analytics Sandbox
+---
+
+```{r setup, message=FALSE}
+library(tidyverse)
+library(quanteda)
+library(viridis)
+```
+
+## Read In Posts and Comments
+
+```{r, message=FALSE}
+posts <- 
+  read_csv("./data/reddit-analytics-posts-filtered.csv") %>%
+  select(subreddit, title, post_text)
+comments <- 
+  read_csv("./data/reddit-analytics-comments-filtered.csv") %>%
+  select(subreddit, comment)
+```
+
+```{r} 
+corpus_posts <-
+  posts %>%
+  mutate(text = paste(title, post_text)) %>%
+  pull(text) %>%
+  paste(collapse = ' ')
+
+corpus_comments <-
+  comments %>%
+  pull(comment) %>%
+  paste(collapse = ' ')
+
+corpus_all <- paste(corpus_posts, corpus_comments, collapse = ' ')
+```
+
+```{r} 
+my_extra_stopwords <-
+  c("NA", "just", "also", "can", "like", "etc", "lot", "many", "much", "even", "sure")
+
+dfm_posts <-
+  corpus_posts %>%
+  quanteda::corpus() %>%
+  quanteda::tokens(
+    remove_separators = TRUE,
+    remove_punct = TRUE,
+    remove_symbols = TRUE,
+    remove_numbers = TRUE,
+    remove_url = TRUE) %>%
+  tokens_select(min_nchar=3L) %>% #Filter: at least 3 letters 
+  quanteda::dfm(tolower = TRUE) %>%
+  quanteda::dfm_remove(c(my_extra_stopwords,
+                         quanteda::stopwords("english")))
+
+dfm_comments <-
+  corpus_comments %>%
+  quanteda::corpus() %>%
+  quanteda::tokens(
+    remove_separators = TRUE,
+    remove_punct = TRUE,
+    remove_symbols = TRUE,
+    remove_numbers = TRUE,
+    remove_url = TRUE) %>%
+  tokens_select(min_nchar=3L) %>% #Filter: at least 3 letters 
+  quanteda::dfm(tolower = TRUE) %>%
+  quanteda::dfm_remove(c(my_extra_stopwords,
+                         quanteda::stopwords("english")))
+```
+
+## Term Frequency and Document Frequency
+
+```{r} 
+top_words_vector_posts <- 
+  dfm_posts %>%
+  quanteda::topfeatures(scheme = "count", n = 100)
+
+top_words_posts <-
+  tibble(term = names(top_words_vector_posts), 
+         n_posts = nrow(posts),
+         count_in_posts = top_words_vector_posts) %>%
+  mutate(p_posts = round(100 * count_in_posts / n_posts, 2),
+         p_posts = ifelse(p_posts > 100, 100, p_posts)
+         )
+head(top_words_posts, 10)
+```
+
+```{r} 
+top_words_vector_comments<- 
+  dfm_comments %>%
+  quanteda::topfeatures(scheme = "count", n = 100)
+
+top_words_comments <-
+  tibble(term = names(top_words_vector_comments),
+         n_comments = nrow(comments),
+         count_in_comments = top_words_vector_comments,
+         ) %>%
+  mutate(p_comments = round(100 * count_in_comments / n_comments, 2),
+         p_comments = ifelse(p_comments > 100, 100, p_comments)
+         )
+head(top_words_comments, 10)
+```
+
+```{r}
+top_words <-
+  top_words_posts %>%
+  full_join(top_words_comments, join_by(term)) %>%
+  mutate(across(n_posts:p_comments, \(x) replace_na(x, 0)),
+         odds_posts = (count_in_posts / n_posts) / 
+           ((n_posts - count_in_posts) / n_posts),
+         odds_posts = ifelse(odds_posts < 0, Inf, odds_posts),
+         odds_comments = (count_in_comments / n_comments) / 
+           ((n_comments - count_in_comments) / n_comments),
+         odds_comments = ifelse(odds_comments < 0, Inf, odds_comments),
+         across(odds_posts:odds_comments, \(x) replace_na(x, 0)),
+         log_odds_ratio = log(odds_posts / odds_comments)
+         ) %>%
+  arrange(odds_posts)
+head(top_words)
+```
+
+```{r}
+comparison_plot <- 
+  top_words %>%
+  select(term, p_posts, p_comments, log_odds_ratio) %>%
+  mutate(log_odds_ratio = abs(log_odds_ratio)) %>%
+  arrange(-p_posts)
+head(comparison_plot)
+```
+
+## Visualization
+
+```{r, echo=FALSE, warning=FALSE, fig.width=12, fig.height=9}
+ggplot(data = comparison_plot, 
+       mapping = aes(x = p_posts, y = p_comments)) +
+  geom_point(alpha = 0.6, 
+             size = 15,
+             show.legend = TRUE,
+             aes(color = log_odds_ratio)) +
+  scale_color_viridis(rescaler = function(x, to = c(0, 1), from = NULL) {
+    ifelse(x < 2, 
+           scales::rescale(x,
+                           to = to,
+                           from = c(min(x, na.rm = TRUE), 2)),
+           1)
+  }
+  ) +
+  ggrepel::geom_label_repel(aes(label = term),
+                            show.legend = FALSE,
+                            size = 4,
+                            family = 'serif',
+                            check_overlap = TRUE,
+                            nudge_x = 0.15,
+                            nudge_y = 0.15
+  ) +
+  #geom_text(aes(label = hashtag), check_overlap = TRUE, nudge_y = 0, nudge_x = 0.0075, size = 7, family = 'serif') +
+  geom_abline(color = "steelblue") +
+  theme_bw() + 
+  xlab("Percentage of posts containing term") +
+  ylab("Percentage of comme ts containing term") +
+  xlim(0, 60) +
+  ylim(0, 30) +
+  geom_hline(yintercept = 0, color = "black") + 
+  geom_vline(xintercept = 0, color = "black") +
+  theme(panel.border = element_rect(color = "gray80"),
+        panel.grid.major = element_line(color = "gray30"),
+        panel.grid.minor = element_line(color = "gray80"),
+        axis.title=element_text(size=18, family='serif'),
+        axis.text=element_text(size=14, family='serif')
+  ) +
+  labs(color = 'log odds ratio')
+```
+
+```{r, include=FALSE, eval=FALSE}
+ggsave("output/5-term-comparison-scatter.png", width = 12, height = 9)
+```
+

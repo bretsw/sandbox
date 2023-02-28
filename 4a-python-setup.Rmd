@@ -26,7 +26,7 @@ reticulate::install_miniconda()
 ## Create a New Python Environment
 
 ```{r new_python_env, eval=FALSE}
-reticulate::conda_create("~/r-reticulate")
+#reticulate::conda_create("~/r-reticulate")
 ```
 
 ## Check Python Installation
